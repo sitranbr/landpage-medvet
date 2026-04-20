@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Controle</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        #iframe-container {
+            width: 100%;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            border: none;
+        }
+        
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+        
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Carregando sistema...</p>
+    </div>
+    
+    <div id="iframe-container"></div>
+    
+    <script>
+        (function() {
+            'use strict';
+            
+            // Função para decodificar URL ofuscada
+            function decodeUrl(encoded) {
+                try {
+                    // Decodificação base64 reversa com rotação de caracteres
+                    let decoded = atob(encoded);
+                    let result = '';
+                    for (let i = 0; i < decoded.length; i++) {
+                        result += String.fromCharCode(decoded.charCodeAt(i) - 1);
+                    }
+                    return result;
+                } catch(e) {
+                    return '';
+                }
+            }
+            
+            // URL ofuscada (não aparece diretamente no código)
+            const encoded = 'aXV1cXQ7MDBxZnVkYnNmLnBvbWpvZi9vZnVtamd6L2JxcTA=';
+            
+            // Criar iframe dinamicamente
+            function createFrame() {
+                const container = document.getElementById('iframe-container');
+                if (!container) return;
+                
+                const frame = document.createElement('iframe');
+                frame.id = 'mainFrame';
+                frame.style.width = '100%';
+                frame.style.height = '100%';
+                frame.style.border = 'none';
+                frame.style.display = 'block';
+                frame.setAttribute('allow', 'fullscreen');
+                frame.setAttribute('allowfullscreen', '');
+                /* allow-downloads: necessário para PDF via blob + <a download> dentro do iframe (ex.: proxy sistran.app → Netlify) */
+                frame.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation allow-downloads');
+                
+                // Decodificar e definir URL apenas quando necessário
+                const url = decodeUrl(encoded);
+                frame.src = url;
+                
+                frame.onload = function() {
+                    hideLoading();
+                };
+                
+                container.appendChild(frame);
+            }
+            
+            function hideLoading() {
+                const loading = document.getElementById('loading');
+                if (loading) {
+                    loading.classList.add('hidden');
+                }
+            }
+            
+            // Criar iframe após DOM estar pronto
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', createFrame);
+            } else {
+                createFrame();
+            }
+            
+            // Ocultar loading após timeout
+            setTimeout(hideLoading, 3000);
+            
+            // Proteções contra inspeção
+            let devtools = {open: false};
+            const element = new Image();
+            Object.defineProperty(element, 'id', {
+                get: function() {
+                    devtools.open = true;
+                    return '';
+                }
+            });
+            
+            setInterval(function() {
+                devtools.open = false;
+                console.log(element);
+                if (devtools.open) {
+                    // Opcional: redirecionar ou mostrar aviso
+                    // window.location.href = 'about:blank';
+                }
+            }, 1000);
+            
+            // Bloquear teclas de desenvolvedor
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'F12' || 
+                    (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'C' || e.key === 'J' || e.key === 'K')) ||
+                    (e.ctrlKey && e.key === 'U')) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+            
+            // Bloquear menu de contexto
+            document.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                return false;
+            });
+            
+            // Bloquear seleção de texto
+            document.addEventListener('selectstart', function(e) {
+                e.preventDefault();
+                return false;
+            });
+            
+            // Bloquear arrastar
+            document.addEventListener('dragstart', function(e) {
+                e.preventDefault();
+                return false;
+            });
+            
+        })();
+    </script>
+</body>
+</html>
